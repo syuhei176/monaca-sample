@@ -7,12 +7,108 @@
     <script src="components/loader.js"></script>
     <link rel="stylesheet" href="components/loader.css">
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/4.8.0/firebase.js"></script>
     <script>
+    $(function() {
+      // 1. Initialize Firebase
+      var config = {
+        apiKey: "AIzaSyCvpjjekvNhwp-MxNqWaaZC0q7B-awZVU0",
+        authDomain: "a4f.firebaseapp.com",
+        databaseURL: "https://a4f.firebaseio.com",
+        projectId: "firebase-a4f",
+        storageBucket: "firebase-a4f.appspot.com",
+        messagingSenderId: "603461039161"
+      };
+      firebase.initializeApp(config);
+
+      //2."message"データストアを作成
+      var db = firebase.database();
+      var myChatRef = db.ref("/mychat")//.child('posts')
+      myChatRef.off();
+
+   
+        //4."message"データストアのプッシュイベントを監視
+        myChatRef.limitToLast(20).on('child_added', function(data) {
+          console.log("child_added", data)
+          renderMessage(data.key, data.val());
+        });
+        myChatRef.limitToLast(20).on('child_changed', function(data) {
+          console.log("child_changed", data)
+          renderMessage(data.key, data.val());
+        });
+        var last_message = "dummy";
+        function renderMessage(key, val) {
+            var message_html = '<p class="post-text">' + escapeHTML(val.content) + '</p>';
+            var date_html = '';
+            if(val.timestamp) {
+                date_html = '<p class="post-date">'+escapeHTML( new Date(val.timestamp).toLocaleString())+'</p>';
+            }
+            $("#"+last_message).before('<div id="'+key+'" class="post">'+message_html + date_html +'</div>');
+            last_message = key
+        }
+        function gotoOnline() {
+            $("#title").text('CHAT by v3')
+        }
+        function gotoOffline() {
+            $("#title").text('CHAT by v3 (offline)')
+        }
+        function clearMessages() {
+            last_message = "dummy";
+            $("#messages").html('<div id="dummy"></div>');
+        }
+        function post() {
+            //5."message"データストアにメッセージをプッシュする
+            var content = escapeHTML($("#content").val());
+            if (content && content !== "") {
+              myChatRef.push({
+                content: content,
+                timestamp: new Date().getTime()
+              }).then(function(data) {
+                console.log("succcess to push", data)
+              })
+            }
+            $("#content").val("");
+        }
+        $('#post').click(function () {
+            post();
+        })
+        $('#content').keydown(function (e) {
+            if (e.which == 13){
+                post();
+                return false;
+            }
+        });
+    });
+    //インジェクション対策
+    function escapeHTML(val) {
+        return $('<div>').text(val).html();
+    };
     </script>
 </head>
+
 <body>
-	<br />
-    This is a template for Monaca app.
-    <input type="email"/>
+    <div class="header">
+        <h1 id="title" class="logo">CHAT by Firebase</h1>
+    </div>
+
+    <div class="container">
+        <div class="postarea cf">
+
+            <div class="postarea-text">
+                <textarea name="" id="content" cols="30" rows="10" placeholder="Enterで投稿"></textarea>
+            </div>
+
+            <button id="post" class="postarea-button">投稿する</button>
+        </div>
+    </div>
+
+    <div id="messages" class="content">
+        <div id="dummy"></div>
+    </div>
+
+    <p class="footer"><strong>Shuhei Hiya</strong></p>
 </body>
+
+
 </html>
